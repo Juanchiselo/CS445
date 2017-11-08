@@ -16,8 +16,12 @@ public class Program02
   private static ArrayList<float[]> all_edges = new ArrayList<>();
   private static ArrayList<float[]> global_edges = new ArrayList<>();
   private static ArrayList<float[]> active_edges = new ArrayList<>();
-  private static int parity = 0;
+  private static ArrayList<float[]> edgesToRemove = new ArrayList<>();
+  private static boolean parity = false;
   private static int scanLine = 0;
+  private static int index = 0;
+  private static int xValue = 0;
+  private static int previousXValue = 0;
 
   public static void main(String[] args) 
   {
@@ -64,7 +68,25 @@ public class Program02
       scanLine = (int)global_edges.get(0)[0];
 
 
+      for(int i = 0; i < global_edges.size(); i++)
+      {
+          if(global_edges.get(i)[0] == scanLine)
+          {
+              edgesToRemove.add(global_edges.get(i));
+              active_edges.add(global_edges.get(i));
+          }
+      }
 
+      removeEdges(global_edges, edgesToRemove);
+
+      xValue = (int)active_edges.get(0)[2];
+
+      // Prints out the active_edges table.
+      System.out.println("active_edges table:");
+      printEdgeTable(active_edges);
+      // Prints out the global_edges table.
+      System.out.println("global_edges table:");
+      printEdgeTable(global_edges);
       
       Program02 program02 = new Program02();
       program02.start();
@@ -78,6 +100,16 @@ public class Program02
                   + " Y-Max: " + edgeTable.get(i)[1]
                   + " X-Val: " + edgeTable.get(i)[2]
                   + " 1/m: " + edgeTable.get(i)[3]);
+      }
+  }
+
+  private static void removeEdges(ArrayList<float[]> edgeTable, ArrayList<float[]> edgesToRemove)
+  {
+      int edgesCounter = edgesToRemove.size();
+      for(int i = 0; i < edgesCounter; i++)
+      {
+          edgeTable.remove(edgesToRemove.get(0));
+          edgesToRemove.remove(0);
       }
   }
 
@@ -157,9 +189,49 @@ public class Program02
           { 
               glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
               glLoadIdentity();
-              
 
-              
+              if(active_edges.size() != 0)
+                  xValue = (int)active_edges.get(index)[2];
+
+              for(int y = scanLine; y < DISPLAY_HEIGHT; y++)
+              {
+                  for(int x = 0; x < DISPLAY_WIDTH; x++)
+                  {
+                      if(x == xValue)
+                      {
+                          parity = !parity;
+
+                          if(index < active_edges.size() - 1)
+                          {
+                              previousXValue = xValue;
+                              index++;
+                              xValue = (int) active_edges.get(index)[2];
+                          }
+
+                          if(xValue == previousXValue)
+                          {
+                              drawPoint(xValue, scanLine, 1, "RED");
+                              index++;
+                              xValue = (int)active_edges.get(index)[2];
+                          }
+                      }
+
+                      if(parity)
+                      {
+                          drawPoint(x, scanLine, 1, "RED");
+                      }
+                  }
+                  scanLine++;
+                  index = 0;
+                  parity = false;
+                  updateActiveEdgesTable();
+                  System.out.println("\n\n");
+                  printEdgeTable(active_edges);
+              }
+              if(active_edges.size() != 0)
+                scanLine = (int)active_edges.get(index)[0];
+
+
               Display.update();
               Display.sync(60);
          }
@@ -169,6 +241,22 @@ public class Program02
         }
       }
       Display.destroy();
+  }
+
+  private void updateActiveEdgesTable()
+  {
+      System.out.println("Scanline: " + scanLine);
+      for (int i = 0; i < active_edges.size(); i++)
+      {
+          active_edges.get(i)[2] = active_edges.get(i)[2] + active_edges.get(i)[3];
+
+          if(active_edges.get(i)[1] == scanLine)
+              edgesToRemove.add(active_edges.get(i));
+      }
+
+      Collections.sort(active_edges, byCriteria);
+      if(edgesToRemove.size() != 0)
+          removeEdges(active_edges, edgesToRemove);
   }
   
   private void drawPoint(float x, float y, int size, String color)
